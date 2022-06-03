@@ -40,4 +40,4 @@
 #define SEL_TSS         0x28    /* Task-state segment. */
 #define SEL_CNT         8       /* Number of segments. */
 
-#endif /* threads/loader.h */
+#endif /* threads/ */

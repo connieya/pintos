@@ -27,6 +27,9 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+static struct list sleep_list;
+
+static int64_t next_tick_to_awake;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -63,7 +66,7 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 
-/* Returns true if T appears to point to a valid thread. */
+/* Returns true if T appe ars to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
 /* Returns the running thread.
@@ -109,6 +112,7 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	list_init(&ready_list);
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -180,6 +184,7 @@ tid_t
 thread_create (const char *name, int priority,
 		thread_func *function, void *aux) {
 	struct thread *t;
+	// struct kernel_thread_frame *kf;
 	tid_t tid;
 
 	ASSERT (function != NULL);
@@ -192,6 +197,7 @@ thread_create (const char *name, int priority,
 	/* Initialize thread. */
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
+	// kf = alloc_frame(t,sizeof *kf); // gh
 
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
@@ -294,6 +300,9 @@ thread_exit (void) {
 
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
+
+   // 현재 쓰레드를 ready_list 에 보내고
+   // ready_list에 있는 것을 실행 상태로 보낸다.
 void
 thread_yield (void) {
 	struct thread *curr = thread_current ();
@@ -306,6 +315,49 @@ thread_yield (void) {
 		list_push_back (&ready_list, &curr->elem);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
+}
+
+int64_t get_next_tick_to_awake(void){
+	return next_tick_to_awake;
+}
+
+void thread_awake(int64_t ticks){
+	struct list_elem *tmp;
+	tmp = list_begin(&sleep_list);
+	next_tick_to_awake = INT16_MAX;
+
+	while (tmp != list_end(&sleep_list))
+	{
+		struct thread *curr_thread = list_entry(tmp, struct thread , elem);
+		if(curr_thread->wakeup_tick <= ticks){
+			tmp = list_remove(&curr_thread->elem);
+			thread_unblock(curr_thread);
+		}else {
+			tmp = list_next(tmp);
+			update_next_tick_to_awake(curr_thread->wakeup_tick);
+		}
+	}
+	
+}
+
+void update_next_tick_to_awake(int64_t wakeup_time)
+{
+	next_tick_to_awake = (next_tick_to_awake > wakeup_time) ? wakeup_time : next_tick_to_awake;
+}
+
+thread_sleep(int64_t ticks)
+{
+	struct thread *curr = thread_current();
+	enum intr_level old_level;
+
+	old_level = intr_disable();
+	if(curr != idle_thread){
+		curr->wakeup_tick = ticks;
+		list_push_back(&sleep_list, &curr->elem);
+		update_next_tick_to_awake(curr->wakeup_tick);
+	}
+	do_schedule(THREAD_BLOCKED);
+	intr_set_level(old_level);
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -425,8 +477,11 @@ next_thread_to_run (void) {
 }
 
 /* Use iretq to launch the thread */
-void
-do_iret (struct intr_frame *tf) {
+void /// 다른 스레드가 실행된다.
+// 인터럽트 프레임 안에 있는 프로그램 카운터 등 여러 정보들을 CPU 레지스터에 저장하는 과정
+// CPU 는 유저 프로그램이 이전에 실행 했던 코드 부터 다시 실행한다.
+do_iret(struct intr_frame *tf)
+{
 	__asm __volatile(
 			"movq %0, %%rsp\n"
 			"movq 0(%%rsp),%%r15\n"
@@ -538,9 +593,11 @@ do_schedule(int status) {
 	schedule ();
 }
 
-static void
+static void // 컨텍스트 스위칭 작업 수행
 schedule (void) {
 	struct thread *curr = running_thread ();
+	
+	// ready_list 제일 앞에 있는 스레드 (pop_front_
 	struct thread *next = next_thread_to_run ();
 
 	ASSERT (intr_get_level () == INTR_OFF);

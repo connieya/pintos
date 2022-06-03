@@ -21,12 +21,12 @@
 #define PGMASK  BITMASK(PGSHIFT, PGBITS)   /* Page offset bits (0:12). */
 
 /* Offset within a page. */
-#define pg_ofs(va) ((uint64_t) (va) & PGMASK)
+#define pg_ofs(va) ((uint64_t) (va) & PGMASK) // return the page offset
 
-#define pg_no(va) ((uint64_t) (va) >> PGBITS)
+#define pg_no(va) ((uint64_t) (va) >> PGBITS) // return page number
 
 /* Round up to nearest page boundary. */
-#define pg_round_up(va) ((void *) (((uint64_t) (va) + PGSIZE - 1) & ~PGMASK))
+#define pg_round_up(va) ((void *) (((uint64_t) (va) + PGSIZE - 1) & ~PGMASK)) // return virtual address rounded up
 
 /* Round down to nearest page boundary. */
 #define pg_round_down(va) (void *) ((uint64_t) (va) & ~PGMASK)
@@ -46,7 +46,7 @@
 // FIXME: add checking
 /* Returns kernel virtual address at which physical address PADDR
  *  is mapped. */
-#define ptov(paddr) ((void *) (((uint64_t) paddr) + KERN_BASE))
+#define ptov(paddr) ((void *) (((uint64_t) paddr) + KERN_BASE)) // 커널 가상 주소를 반환한다.
 
 /* Returns physical address at which kernel virtual address VADDR
  * is mapped. */

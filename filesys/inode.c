@@ -12,7 +12,8 @@
 
 /* On-disk inode.
  * Must be exactly DISK_SECTOR_SIZE bytes long. */
-struct inode_disk {
+struct 
+inode_disk {
 	disk_sector_t start;                /* First data sector. */
 	off_t length;                       /* File size in bytes. */
 	unsigned magic;                     /* Magic number. */

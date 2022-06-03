@@ -1,161 +1,161 @@
-#include "filesys/file.h"
+#include "sys/.h"
 #include <debug.h>
-#include "filesys/inode.h"
+#include "sys/inode.h"
 #include "threads/malloc.h"
 
-/* An open file. */
-struct file {
-	struct inode *inode;        /* File's inode. */
+/* An open . */
+struct  {
+	struct inode *inode;        /* 's inode. */
 	off_t pos;                  /* Current position. */
-	bool deny_write;            /* Has file_deny_write() been called? */
+	bool deny_write;            /* Has _deny_write() been called? */
 };
 
-/* Opens a file for the given INODE, of which it takes ownership,
- * and returns the new file.  Returns a null pointer if an
+/* Opens a  for the given INODE, of which it takes ownership,
+ * and returns the new .  Returns a null pointer if an
  * allocation fails or if INODE is null. */
-struct file *
-file_open (struct inode *inode) {
-	struct file *file = calloc (1, sizeof *file);
-	if (inode != NULL && file != NULL) {
-		file->inode = inode;
-		file->pos = 0;
-		file->deny_write = false;
-		return file;
+struct  *
+_open (struct inode *inode) {
+	struct  * = calloc (1, sizeof *);
+	if (inode != NULL &&  != NULL) {
+		->inode = inode;
+		->pos = 0;
+		->deny_write = false;
+		return ;
 	} else {
 		inode_close (inode);
-		free (file);
+		free ();
 		return NULL;
 	}
 }
 
-/* Opens and returns a new file for the same inode as FILE.
+/* Opens and returns a new  for the same inode as .
  * Returns a null pointer if unsuccessful. */
-struct file *
-file_reopen (struct file *file) {
-	return file_open (inode_reopen (file->inode));
+struct  *
+_reopen (struct  *) {
+	return _open (inode_reopen (->inode));
 }
 
-/* Duplicate the file object including attributes and returns a new file for the
- * same inode as FILE. Returns a null pointer if unsuccessful. */
-struct file *
-file_duplicate (struct file *file) {
-	struct file *nfile = file_open (inode_reopen (file->inode));
-	if (nfile) {
-		nfile->pos = file->pos;
-		if (file->deny_write)
-			file_deny_write (nfile);
+/* Duplicate the  object including attributes and returns a new  for the
+ * same inode as . Returns a null pointer if unsuccessful. */
+struct  *
+_duplicate (struct  *) {
+	struct  *n = _open (inode_reopen (->inode));
+	if (n) {
+		n->pos = ->pos;
+		if (->deny_write)
+			_deny_write (n);
 	}
-	return nfile;
+	return n;
 }
 
-/* Closes FILE. */
+/* Closes . */
 void
-file_close (struct file *file) {
-	if (file != NULL) {
-		file_allow_write (file);
-		inode_close (file->inode);
-		free (file);
+_close (struct  *) {
+	if ( != NULL) {
+		_allow_write ();
+		inode_close (->inode);
+		free ();
 	}
 }
 
-/* Returns the inode encapsulated by FILE. */
+/* Returns the inode encapsulated by . */
 struct inode *
-file_get_inode (struct file *file) {
-	return file->inode;
+_get_inode (struct  *) {
+	return ->inode;
 }
 
-/* Reads SIZE bytes from FILE into BUFFER,
- * starting at the file's current position.
+/* Reads SIZE bytes from  into BUFFER,
+ * starting at the 's current position.
  * Returns the number of bytes actually read,
- * which may be less than SIZE if end of file is reached.
- * Advances FILE's position by the number of bytes read. */
+ * which may be less than SIZE if end of  is reached.
+ * Advances 's position by the number of bytes read. */
 off_t
-file_read (struct file *file, void *buffer, off_t size) {
-	off_t bytes_read = inode_read_at (file->inode, buffer, size, file->pos);
-	file->pos += bytes_read;
+_read (struct  *, void *buffer, off_t size) {
+	off_t bytes_read = inode_read_at (->inode, buffer, size, ->pos);
+	->pos += bytes_read;
 	return bytes_read;
 }
 
-/* Reads SIZE bytes from FILE into BUFFER,
- * starting at offset FILE_OFS in the file.
+/* Reads SIZE bytes from  into BUFFER,
+ * starting at offset _OFS in the .
  * Returns the number of bytes actually read,
- * which may be less than SIZE if end of file is reached.
- * The file's current position is unaffected. */
+ * which may be less than SIZE if end of  is reached.
+ * The 's current position is unaffected. */
 off_t
-file_read_at (struct file *file, void *buffer, off_t size, off_t file_ofs) {
-	return inode_read_at (file->inode, buffer, size, file_ofs);
+_read_at (struct  *, void *buffer, off_t size, off_t _ofs) {
+	return inode_read_at (->inode, buffer, size, _ofs);
 }
 
-/* Writes SIZE bytes from BUFFER into FILE,
- * starting at the file's current position.
+/* Writes SIZE bytes from BUFFER into ,
+ * starting at the 's current position.
  * Returns the number of bytes actually written,
- * which may be less than SIZE if end of file is reached.
- * (Normally we'd grow the file in that case, but file growth is
+ * which may be less than SIZE if end of  is reached.
+ * (Normally we'd grow the  in that case, but  growth is
  * not yet implemented.)
- * Advances FILE's position by the number of bytes read. */
+ * Advances 's position by the number of bytes read. */
 off_t
-file_write (struct file *file, const void *buffer, off_t size) {
-	off_t bytes_written = inode_write_at (file->inode, buffer, size, file->pos);
-	file->pos += bytes_written;
+_write (struct  *, const void *buffer, off_t size) {
+	off_t bytes_written = inode_write_at (->inode, buffer, size, ->pos);
+	->pos += bytes_written;
 	return bytes_written;
 }
 
-/* Writes SIZE bytes from BUFFER into FILE,
- * starting at offset FILE_OFS in the file.
+/* Writes SIZE bytes from BUFFER into ,
+ * starting at offset _OFS in the .
  * Returns the number of bytes actually written,
- * which may be less than SIZE if end of file is reached.
- * (Normally we'd grow the file in that case, but file growth is
+ * which may be less than SIZE if end of  is reached.
+ * (Normally we'd grow the  in that case, but  growth is
  * not yet implemented.)
- * The file's current position is unaffected. */
+ * The 's current position is unaffected. */
 off_t
-file_write_at (struct file *file, const void *buffer, off_t size,
-		off_t file_ofs) {
-	return inode_write_at (file->inode, buffer, size, file_ofs);
+_write_at (struct  *, const void *buffer, off_t size,
+		off_t _ofs) {
+	return inode_write_at (->inode, buffer, size, _ofs);
 }
 
-/* Prevents write operations on FILE's underlying inode
- * until file_allow_write() is called or FILE is closed. */
+/* Prevents write operations on 's underlying inode
+ * until _allow_write() is called or  is closed. */
 void
-file_deny_write (struct file *file) {
-	ASSERT (file != NULL);
-	if (!file->deny_write) {
-		file->deny_write = true;
-		inode_deny_write (file->inode);
+_deny_write (struct  *) {
+	ASSERT ( != NULL);
+	if (!->deny_write) {
+		->deny_write = true;
+		inode_deny_write (->inode);
 	}
 }
 
-/* Re-enables write operations on FILE's underlying inode.
- * (Writes might still be denied by some other file that has the
+/* Re-enables write operations on 's underlying inode.
+ * (Writes might still be denied by some other  that has the
  * same inode open.) */
 void
-file_allow_write (struct file *file) {
-	ASSERT (file != NULL);
-	if (file->deny_write) {
-		file->deny_write = false;
-		inode_allow_write (file->inode);
+_allow_write (struct  *) {
+	ASSERT ( != NULL);
+	if (->deny_write) {
+		->deny_write = false;
+		inode_allow_write (->inode);
 	}
 }
 
-/* Returns the size of FILE in bytes. */
+/* Returns the size of  in bytes. */
 off_t
-file_length (struct file *file) {
-	ASSERT (file != NULL);
-	return inode_length (file->inode);
+_length (struct  *) {
+	ASSERT ( != NULL);
+	return inode_length (->inode);
 }
 
-/* Sets the current position in FILE to NEW_POS bytes from the
- * start of the file. */
+/* Sets the current position in  to NEW_POS bytes from the
+ * start of the . */
 void
-file_seek (struct file *file, off_t new_pos) {
-	ASSERT (file != NULL);
+_seek (struct  *, off_t new_pos) {
+	ASSERT ( != NULL);
 	ASSERT (new_pos >= 0);
-	file->pos = new_pos;
+	->pos = new_pos;
 }
 
-/* Returns the current position in FILE as a byte offset from the
- * start of the file. */
+/* Returns the current position in  as a byte offset from the
+ * start of the . */
 off_t
-file_tell (struct file *file) {
-	ASSERT (file != NULL);
-	return file->pos;
+_tell (struct  *) {
+	ASSERT ( != NULL);
+	return ->pos;
 }

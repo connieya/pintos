@@ -38,6 +38,8 @@ process_init (void) {
  * before process_create_initd() returns. Returns the initd's
  * thread id, or TID_ERROR if the thread cannot be created.
  * Notice that THIS SHOULD BE CALLED ONCE. */
+
+// process_execute
 tid_t
 process_create_initd (const char *file_name) {
 	char *fn_copy;
@@ -76,8 +78,11 @@ initd (void *f_name) {
 tid_t
 process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	/* Clone current thread to new thread.*/
+	struct thread *curr = thread_current();
 	return thread_create (name,
 			PRI_DEFAULT, __do_fork, thread_current ());
+
+	memccpy(&curr->parent_if , if_, sizeof(struct intf_frame));
 }
 
 #ifndef VM
@@ -160,6 +165,8 @@ error:
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
+// ppt => start_process ()
+// 사용자 프로그랭을 위한 인자 셋업 
 int
 process_exec (void *f_name) {
 	char *file_name = f_name;
@@ -176,6 +183,11 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+	char file_name_copy[128];
+	memcpy(file_name_copy, file_name, strlen(file_name) + 1);
+	char *token , *save_ptr;
+
+
 	/* And then load the binary */
 	success = load (file_name, &_if);
 
@@ -184,6 +196,8 @@ process_exec (void *f_name) {
 	if (!success)
 		return -1;
 
+	void **rspp = &_if.rsp;
+	
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
@@ -329,6 +343,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
+	char *arg_list[128];
 	/* Allocate and activate page directory. */
 	t->pml4 = pml4_create ();
 	if (t->pml4 == NULL)

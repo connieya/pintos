@@ -11,6 +11,10 @@
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 
+void check_address(uaddr);
+bool create(const char *file , unsigned initial_size);
+bool remove(const char *file);
+
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -42,5 +46,20 @@ void
 syscall_handler (struct intr_frame *f UNUSED) {
 	// TODO: Your implementation goes here.
 	printf ("system call!\n");
+
+	switch (f->R.rax)
+	{
+	case /* constant-expression */:
+		/* code */
+		break;
+	
+	default:
+		break;
+	}
 	thread_exit ();
+}
+
+bool create(const char * file , unsigned initial_size)
+{
+	check_address(file);
 }

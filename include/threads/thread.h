@@ -95,6 +95,16 @@ struct thread {
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
+	int init_priority; // 기부 받은 우선순위에서 본래의 우선순위로 돌아가기 위한 임시 변수
+	struct lock *wait_on_lock;
+	struct list donations;
+	struct list_elem donation_elem;
+
+	int exit_status;
+
+	struct file **fd_table;
+	int fd;
+	struct file *running_thread;
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
@@ -147,5 +157,8 @@ thread_sleep(int64_t ticks);
 int64_t get_next_tick_to_awake(void);
 void update_next_tick_to_awake(int64_t wakeup_time);
 void thread_awake(int64_t ticks);
+void test_max_priority(void);
+bool cmp_priority(const struct list_elem * a, const struct list_elem *b , void *aux UNUSED);
+void thread_set_priority(int new_priority);
 
 #endif /* threads/thread.h */

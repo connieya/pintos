@@ -29,6 +29,8 @@
 static struct list ready_list;
 static struct list sleep_list;
 
+list_less_func *less;
+
 static int64_t next_tick_to_awake;
 
 /* Idle thread. */
@@ -164,6 +166,19 @@ thread_print_stats (void) {
 	printf ("Thread: %lld idle ticks, %lld kernel ticks, %lld user ticks\n",
 			idle_ticks, kernel_ticks, user_ticks);
 }
+bool cmp_priority(const struct list_elem *a , const struct list_elem *b , void *aux UNUSED)
+{
+	struct thread *t1 = list_entry(a,struct thread , elem);
+	struct thread *t2 = list_entry(b,struct thread , elem);
+	return t1->priority > t2->priority;
+
+}
+
+void test_max_priority(){
+	if(cmp_priority(list_begin(&ready_list),&thread_current()->elem,NULL)){
+		thread_yield();
+	}
+}
 
 /* Creates a new kernel thread named NAME with the given initial
    PRIORITY, which executes FUNCTION passing AUX as the argument,
@@ -186,7 +201,7 @@ thread_create (const char *name, int priority,
 	struct thread *t;
 	// struct kernel_thread_frame *kf;
 	tid_t tid;
-
+	enum intr_level old_level;
 	ASSERT (function != NULL);
 
 	/* Allocate thread. */
@@ -211,8 +226,23 @@ thread_create (const char *name, int priority,
 	t->tf.eflags = FLAG_IF;
 
 	/* Add to run queue. */
-	thread_unblock (t);
+	// thread_unblock (t);
+	// block queue -> ready_list 
+	struct thread * curr = thread_current();
+	old_level = intr_disable();
+	t->status = THREAD_READY;
+	if (!list_empty(&ready_list))
+	{ // SJ, ready_list가 비어있지 않다면, ready_list에 넣고 yield할지 말지 판단한다.
+		list_insert_ordered(&ready_list, &t->elem, cmp_priority, 0);
+		test_max_priority();
+	}
+	else
+	{ // SJ, ready_list가 비어있다면, ready_list에 넣고 yield하여 CPU에 올라가도록 한다.
+		list_insert_ordered(&ready_list, &t->elem, cmp_priority, 0);
+		thread_yield();
+	}
 
+	intr_set_level(old_level);
 	return tid;
 }
 
@@ -246,7 +276,8 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	// list_push_back (&ready_list, &t->elem);
+	list_insert_ordered(&ready_list,&t->elem,cmp_priority,0);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -311,8 +342,11 @@ thread_yield (void) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
-	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+	if (curr != idle_thread){
+		list_insert_ordered(&ready_list, &curr->elem, cmp_priority, 0);
+	}
+		// list_push_back (&ready_list, &curr->elem);
+		
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -363,7 +397,10 @@ thread_sleep(int64_t ticks)
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
+	struct thread *curr = thread_current();
+	curr->priority = new_priority;
+	curr->init_priority = new_priority;
+	test_max_priority();
 }
 
 /* Returns the current thread's priority. */
